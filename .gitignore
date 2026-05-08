@@ -1,0 +1,13 @@
+myenv/
+venv/
+__pycache__/
+*.pyc
+
+.env
+
+chroma_db/
+
+*.pdf
+
+.idea/
+.vscode/
