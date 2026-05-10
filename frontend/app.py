@@ -60,7 +60,7 @@ if st.button("Analyze Resume"):
             try:
 
                 response = requests.post(
-                    "http://127.0.0.1:8000/run-workflow",
+                    "https://ai-job-search-optimizer.onrender.com/run-workflow",
                     files=files,
                     data=data
                 )
@@ -115,9 +115,7 @@ if st.button("Analyze Resume"):
 
                 else:
 
-                    st.error(
-                        response.json()["detail"]
-                    )
+                    st.error(response.text)
 
             except Exception as e:
 
