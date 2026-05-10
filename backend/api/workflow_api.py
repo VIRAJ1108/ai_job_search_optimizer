@@ -1,99 +1,132 @@
-from fastapi import APIRouter
-from fastapi import Depends
+from fastapi import APIRouter,UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.database.connection import get_db
-from backend.database.crud import create_resume, create_job_description, create_match_result
+from backend.database.crud import create_resume, create_job_description, create_match_result, get_all_job_descriptions, get_all_match_results, get_all_resumes
 from backend.parsers.resume_parser import extract_text_from_pdf
 from backend.parsers.jd_parser import parse_job_description
 from backend.services.matching_service import match_resume_to_jd
 from backend.llm.reasoning_engine import generate_match_analysis
+import os
 
 router = APIRouter()
 
 @router.post("/run-workflow")
-def run_workflow(
+async def run_workflow(
+    resume: UploadFile = File(...),
+    job_description: str = Form(...),
     db: Session = Depends(get_db)
 ):
     """
     Full AI workflow pipeline
     """
 
+    if not resume.filename.endswith(".pdf"):
+
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF resumes are allowed."
+        )
+    
+    # Validate JD
+    if not job_description.strip():
+
+        raise HTTPException(
+            status_code=400,
+            detail="Job description cannot be empty."
+        )
+
     # Resume Path
-    resume_path = "resumes/Viraj_Lite_CV.pdf"
+    resume_path = f"temp_{resume.filename}"
 
-    # Parse Resume
-    resume_data = extract_text_from_pdf(
-        resume_path
-    )
+    try:
+        with open(resume_path, "wb") as file:
 
-    # Save Resume
-    saved_resume = create_resume(
-        db,
-        "Viraj_Lite_CV.pdf",
-        resume_data
-    )
+            content = await resume.read()
 
-    # Sample JD
-    sample_jd = """
-    We are looking for an AI/ML Engineer with experience in
-    Python, Machine Learning, Deep Learning, PyTorch,
-    FastAPI, SQL, Computer Vision and LLM applications.
+            file.write(content)
+        
+        # Parse Resume
+        resume_data = extract_text_from_pdf(
+            resume_path
+        )
 
-    Candidates with experience in RAG systems,
-    LangChain, vector databases, and Generative AI
-    applications will be preferred.
-    """
+        # Save Resume
+        saved_resume = create_resume(
+            db,
+            resume.filename,
+            resume_data
+        )
 
-    # Parse JD
-    jd_data = parse_job_description(
-        sample_jd
-    )
+        # Parse JD
+        jd_data = parse_job_description(
+            job_description
+        )
 
-    # Save JD
-    saved_jd = create_job_description(
-        db,
-        jd_data,
-        sample_jd
-    )
+        if not job_description.strip():
 
-    # Match
-    match_result = match_resume_to_jd(
-        resume_data,
-        jd_data
-    )
+            raise HTTPException(
+                status_code=400,
+                detail="Job description cannot be empty."
+            )
+        
+        # Save JD
+        saved_jd = create_job_description(
+            db,
+            jd_data,
+            job_description
+        )
 
-    # AI Analysis
-    analysis = generate_match_analysis(
-        resume_data,
-        jd_data,
-        match_result
-    )
+        # Match
+        match_result = match_resume_to_jd(
+            resume_data,
+            jd_data
+        )
 
-    # Save Match Result
-    saved_result = create_match_result(
-        db,
-        match_result,
-        analysis,
-        saved_resume.id,
-        saved_jd.id
-    )
+        # AI Analysis
+        analysis = generate_match_analysis(
+            resume_data,
+            jd_data,
+            match_result
+        )
 
-    return {
-        "message": "Workflow completed successfully!",
+        # Save Match Result
+        saved_result = create_match_result(
+            db,
+            match_result,
+            analysis,
+            saved_resume.id,
+            saved_jd.id
+        )
 
-        "resume_id": saved_resume.id,
+        return {
+            "message": "Workflow completed successfully!",
 
-        "job_description_id": saved_jd.id,
+            "resume_id": saved_resume.id,
 
-        "match_result_id": saved_result.id,
+            "job_description_id": saved_jd.id,
 
-        "semantic_match_score":
-            saved_result.semantic_match_score,
+            "match_result_id": saved_result.id,
 
-        "analysis": {
-            "strengths": analysis.strengths,
-            "weaknesses": analysis.weaknesses,
-            "recommendations":
-                analysis.recommendations
+            "semantic_match_score":
+                saved_result.semantic_match_score,
+
+            "analysis": {
+                "strengths": analysis.strengths,
+                "weaknesses": analysis.weaknesses,
+                "recommendations":
+                    analysis.recommendations
+            }
         }
-    }
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+    finally:
+
+        # Cleanup temp PDF
+        if os.path.exists(resume_path):
+
+            os.remove(resume_path)
+

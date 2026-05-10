@@ -119,3 +119,35 @@ def create_match_result(
     db.refresh(result)
 
     return result
+#-------------------------------------------
+
+def get_all_resumes(
+    db: Session
+):
+    """
+    Retrieve all resumes
+    """
+
+    return db.query(Resume).all()
+#-------------------------------------------
+def get_all_job_descriptions(
+    db: Session
+):
+    """
+    Retrieve all job descriptions
+    """
+
+    return db.query(
+        JobDescription
+    ).all()
+#-----------------------------------------------
+def get_all_match_results(
+    db: Session
+):
+    """
+    Retrieve all match results
+    """
+
+    return db.query(
+        MatchResult
+    ).all()

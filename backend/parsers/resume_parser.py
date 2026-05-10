@@ -164,9 +164,9 @@ def infer_skills_from_projects(projects_text: str) -> list:
     return list(inferred_skills)
 
 
-def extract_project_titles(projects_text: str) -> list:
+def extract_projects(projects_text: str) -> list:
     """
-    Extract project titles
+    Extract structured project information
     """
 
     if not projects_text:
@@ -174,19 +174,43 @@ def extract_project_titles(projects_text: str) -> list:
 
     lines = projects_text.split("\n")
 
-    project_titles = []
+    projects = []
+
+    current_project = None
 
     for line in lines:
 
         line = line.strip()
 
+        # Detect new project title
         if line.startswith("●"):
 
-            project_titles.append(
-                line.replace("●", "").strip()
-            )
+            # Save previous project
+            if current_project:
+                projects.append(current_project)
 
-    return project_titles
+            current_project = {
+                "title": line.replace(
+                    "●",
+                    ""
+                ).strip(),
+
+                "description": ""
+            }
+
+        else:
+
+            if current_project and line:
+
+                current_project[
+                    "description"
+                ] += line + " "
+
+    # Append last project
+    if current_project:
+        projects.append(current_project)
+
+    return projects
 
 
 def structure_resume_data(sections: dict) -> dict:
@@ -210,7 +234,7 @@ def structure_resume_data(sections: dict) -> dict:
         "education": sections.get("education", ""),
         "experience": sections.get("experience", ""),
         "skills": combined_skills,
-        "projects": extract_project_titles(
+        "projects": extract_projects(
             sections.get("projects", "")
         ),
         "certifications": sections.get(
