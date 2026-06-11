@@ -61,7 +61,7 @@ if st.button("Analyze Resume"):
             try:
 
                 response = requests.post(
-                    f"{BACKEND_URL}/run-workflow",
+                    "https://aijobsearchoptimizer-production.up.railway.app/run-workflow",
                     files=files,
                     data=data
                 )
