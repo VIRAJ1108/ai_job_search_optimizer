@@ -49,6 +49,8 @@ async def run_workflow(
         resume_data = extract_text_from_pdf(
             resume_path
         )
+        print(resume_data)
+
 
         # Save Resume
         saved_resume = create_resume(
@@ -118,6 +120,12 @@ async def run_workflow(
             }
         }
     except Exception as e:
+
+        print("ERROR OCCURRED:")
+        print(str(e))
+
+        import traceback
+        traceback.print_exc()
 
         raise HTTPException(
             status_code=500,

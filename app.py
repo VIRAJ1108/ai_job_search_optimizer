@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import os
 
 
 st.set_page_config(
@@ -60,7 +61,7 @@ if st.button("Analyze Resume"):
             try:
 
                 response = requests.post(
-                    "https://ai-job-search-optimizer.onrender.com/run-workflow",
+                    f"{BACKEND_URL}/run-workflow",
                     files=files,
                     data=data
                 )
